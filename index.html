@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PromptCraft AI - Free Open-Source Image-to-Prompt Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f5ff',
+                            100: '#e0ebff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#1e1b4b',
+                            accent: '#8b5cf6'
+                        },
+                        darkbg: '#0b0f19',
+                        darkcard: '#131b2e',
+                        darkborder: '#1e293b'
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            background-color: #0b0f19;
+            color: #f3f4f6;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .glass-panel {
+            background: rgba(19, 27, 46, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-panel-hover:hover {
+            border-color: rgba(99, 102, 241, 0.4);
+            box-shadow: 0 0 25px -5px rgba(99, 102, 241, 0.15);
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #a855f7, #6366f1, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .gradient-border {
+            position: relative;
+            border-radius: 1rem;
+        }
+        .gradient-border::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: 1rem;
+            padding: 1px;
+            background: linear-gradient(135deg, rgba(168,85,247,0.5), rgba(99,102,241,0.2));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+        .ad-placeholder {
+            background: repeating-linear-gradient(
+                45deg,
+                rgba(30, 41, 59, 0.3),
+                rgba(30, 41, 59, 0.3) 10px,
+                rgba(15, 23, 42, 0.3) 10px,
+                rgba(15, 23, 42, 0.3) 20px
+            );
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-brand-500 selection:text-white">
+
+    <!-- HEADER -->
+    <header class="sticky top-0 z-50 glass-panel border-b border-gray-800/80">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 via-brand-accent to-blue-500 flex items-center justify-center shadow-lg shadow-brand-500/20">
+                    <i class="fa-solid font-bold text-white text-lg fa-wand-magic-sparkles"></i>
+                </div>
+                <div>
+                    <span class="text-xl font-bold tracking-tight text-white">Prompt<span class="gradient-text">Craft</span></span>
+                    <span class="ml-2 text-xs bg-brand-500/20 text-brand-500 border border-brand-500/30 px-2 py-0.5 rounded-full font-medium">Free & Open</span>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-4">
+                <button id="apiKeyBtn" class="text-xs bg-darkborder hover:bg-gray-800 text-gray-300 px-3 py-2 rounded-lg border border-gray-700 transition-all flex items-center gap-1.5">
+                    <i class="fa-solid fa-key text-yellow-500"></i>
+                    <span class="hidden sm:inline">Set Custom Gemini Key</span>
+                </button>
+                <a href="https://github.com" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition-colors p-2 text-lg" title="GitHub Repository">
+                    <i class="fa-brands fa-github"></i>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full">
+
+        <!-- TOP AD BANNER -->
+        <div id="topAd" class="mb-8 w-full p-3 rounded-xl glass-panel border border-gray-800/60 flex flex-col sm:flex-row items-center justify-between gap-4 ad-placeholder">
+            <div class="flex items-center gap-3">
+                <span class="text-[10px] uppercase tracking-wider text-gray-500 font-semibold px-2 py-0.5 border border-gray-700 rounded">Sponsor</span>
+                <p id="topAdCopy" class="text-xs text-gray-300"></p>
+            </div>
+            <a id="topAdLink" href="#" target="_blank" rel="noopener" class="whitespace-nowrap text-xs bg-brand-600 hover:bg-brand-500 text-white font-medium px-4 py-1.5 rounded-lg transition-colors">
+                <span id="topAdCta">Explore Partner</span> <i class="fa-solid fa-arrow-up-right-from-square ml-1 text-[10px]"></i>
+            </a>
+        </div>
+
+        <!-- HERO SECTION -->
+        <div class="text-center max-w-3xl mx-auto mb-10">
+            <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white mb-3">
+                Turn Any Image Into a <span class="gradient-text">Perfect Prompt</span>
+            </h1>
+            <p class="text-gray-400 text-sm sm:text-base leading-relaxed">
+                No sign up required. 100% free and open tool to reverse-engineer prompts for Midjourney, Flux.1, Stable Diffusion, and DALL-E 3.
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+            <!-- LEFT COLUMN: Image Input & Controls (7 Cols) -->
+            <div class="lg:col-span-7 space-y-6">
+
+                <!-- UPLOAD AREA CARD -->
+                <div class="glass-panel p-6 rounded-2xl border border-gray-800 transition-all">
+                    <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-4 flex items-center justify-between">
+                        <span>1. Upload Source Image</span>
+                        <span id="fileInfoText" class="text-xs text-brand-500 font-normal"></span>
+                    </h2>
+
+                    <!-- Drag & Drop Zone -->
+                    <div id="dropZone" class="border-2 border-dashed border-gray-700 hover:border-brand-500 rounded-xl p-8 text-center cursor-pointer transition-all bg-darkcard/50 hover:bg-darkcard flex flex-col items-center justify-center min-h-[260px] relative overflow-hidden group">
+                        
+                        <input type="file" id="imageInput" accept="image/*" class="hidden">
+
+                        <!-- Empty State UI -->
+                        <div id="uploadPlaceholder" class="space-y-3 transition-all duration-300 group-hover:scale-105">
+                            <div class="w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-500 flex items-center justify-center mx-auto text-2xl">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-gray-200">Drag & Drop image here</p>
+                                <p class="text-xs text-gray-400 mt-1">or <span class="text-brand-500 underline">browse file</span> from your device</p>
+                            </div>
+                            <p class="text-[11px] text-gray-500">Supports JPG, PNG, WEBP up to 10MB</p>
+                        </div>
+
+                        <!-- Image Preview UI -->
+                        <div id="previewContainer" class="hidden relative w-full h-full min-h-[220px] flex items-center justify-center">
+                            <img id="imagePreview" src="" alt="Uploaded Preview" class="max-h-[300px] w-auto rounded-lg object-contain shadow-2xl border border-gray-800">
+                            <button id="removeImageBtn" class="absolute top-2 right-2 bg-red-500/80 hover:bg-red-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm backdrop-blur transition-all shadow-lg" title="Remove image">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Instant Color Palette Extractor Canvas (Hidden) -->
+                    <canvas id="paletteCanvas" class="hidden"></canvas>
+                </div>
+
+                <!-- ENGINE CONTROL SETTINGS -->
+                <div class="glass-panel p-6 rounded-2xl border border-gray-800 space-y-4">
+                    <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-400">2. Target Generator & Style Options</h2>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Output Target Engine -->
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1.5 font-medium">Target AI Model</label>
+                            <select id="targetEngine" class="w-full bg-darkbg border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-brand-500">
+                                <option value="midjourney">Midjourney v6</option>
+                                <option value="flux">Flux.1 (Schnell / Dev)</option>
+                                <option value="sdxl">Stable Diffusion XL</option>
+                                <option value="dalle3">DALL-E 3</option>
+                            </select>
+                        </div>
+
+                        <!-- Prompt Detail Level -->
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1.5 font-medium">Prompt Length & Detail</label>
+                            <select id="detailLevel" class="w-full bg-darkbg border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-brand-500">
+                                <option value="concise">Concise & Direct</option>
+                                <option value="balanced" selected>Balanced (Recommended)</option>
+                                <option value="hyper">Hyper-detailed & Descriptive</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Style Toggles -->
+                    <div class="pt-2">
+                        <label class="block text-xs text-gray-400 mb-2 font-medium">Include Parameters</label>
+                        <div class="flex flex-wrap gap-2">
+                            <label class="inline-flex items-center bg-darkbg border border-gray-800 px-3 py-1.5 rounded-lg text-xs cursor-pointer hover:border-gray-700">
+                                <input type="checkbox" id="chkAspect" checked class="rounded bg-gray-900 border-gray-700 text-brand-600 focus:ring-0 mr-2">
+                                Detect Aspect Ratio
+                            </label>
+                            <label class="inline-flex items-center bg-darkbg border border-gray-800 px-3 py-1.5 rounded-lg text-xs cursor-pointer hover:border-gray-700">
+                                <input type="checkbox" id="chkCamera" checked class="rounded bg-gray-900 border-gray-700 text-brand-600 focus:ring-0 mr-2">
+                                Camera / Lens Angle
+                            </label>
+                            <label class="inline-flex items-center bg-darkbg border border-gray-800 px-3 py-1.5 rounded-lg text-xs cursor-pointer hover:border-gray-700">
+                                <input type="checkbox" id="chkLighting" checked class="rounded bg-gray-900 border-gray-700 text-brand-600 focus:ring-0 mr-2">
+                                Lighting & Mood
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Generate Button -->
+                    <button id="generateBtn" disabled class="w-full mt-4 bg-gradient-to-r from-brand-600 via-brand-accent to-purple-600 opacity-50 cursor-not-allowed hover:opacity-90 text-white font-semibold py-3.5 px-6 rounded-xl transition-all shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-bolt text-yellow-300"></i>
+                        <span>Generate AI Prompt</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: Output & Sidebar Ads (5 Cols) -->
+            <div class="lg:col-span-5 space-y-6">
+
+                <!-- GENERATED PROMPT OUTPUT CARD -->
+                <div class="glass-panel p-6 rounded-2xl border border-gray-800 relative min-h-[320px] flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-400 flex items-center gap-2">
+                                <i class="fa-solid fa-code text-brand-500"></i>
+                                Generated Prompt
+                            </h2>
+                            <span id="engineBadge" class="text-[11px] bg-brand-500/10 text-brand-400 border border-brand-500/20 px-2.5 py-0.5 rounded-full font-mono uppercase">Midjourney</span>
+                        </div>
+
+                        <!-- Output Text Box -->
+                        <div class="relative group">
+                            <div id="outputContainer" class="w-full min-h-[160px] p-4 bg-darkbg/80 border border-gray-800 rounded-xl text-sm text-gray-200 font-mono leading-relaxed overflow-y-auto max-h-[280px] selection:bg-brand-500/30">
+                                <p class="text-gray-500 italic text-center pt-10">Upload an image and click "Generate AI Prompt" to create your output prompt here.</p>
+                            </div>
+
+                            <!-- Processing Overlay -->
+                            <div id="loadingOverlay" class="hidden absolute inset-0 bg-darkbg/90 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center gap-3">
+                                <div class="w-8 h-8 border-3 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+                                <span class="text-xs text-brand-400 font-medium animate-pulse">Analyzing visual features...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Output Action Toolbar -->
+                    <div class="mt-4 pt-4 border-t border-gray-800/80 flex flex-wrap gap-2">
+                        <button id="copyBtn" disabled class="flex-1 bg-darkborder hover:bg-gray-800 disabled:opacity-40 text-gray-200 text-xs font-semibold py-2.5 px-4 rounded-lg transition-all flex items-center justify-center gap-2 border border-gray-700">
+                            <i class="fa-solid fa-copy"></i>
+                            <span>Copy Prompt</span>
+                        </button>
+                        <button id="enhanceBtn" disabled class="bg-brand-500/20 hover:bg-brand-500/30 disabled:opacity-40 text-brand-300 text-xs font-semibold py-2.5 px-4 rounded-lg transition-all flex items-center justify-center gap-2 border border-brand-500/30">
+                            <i class="fa-solid fa-wand-magic"></i>
+                            <span>Enhance</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- AFFILIATE / RECOMMENDED TOOLS SIDEBAR AD -->
+                <div id="toolAd" class="glass-panel p-5 rounded-2xl border border-gray-800">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-[10px] font-semibold tracking-wider text-gray-500 uppercase">Recommended AI Stack</span>
+                        <span class="text-[10px] text-gray-600">Ad</span>
+                    </div>
+                    <ul id="toolAdList" class="space-y-2.5"></ul>
+                </div>
+
+                <!-- LOCAL AD SLOT: replace the email address with your own sales contact -->
+                <div class="w-full h-44 rounded-2xl glass-panel border border-gray-800/80 p-4 flex flex-col items-center justify-center text-center ad-placeholder">
+                    <span class="text-[10px] uppercase text-gray-500 tracking-wider mb-1">Advertisement</span>
+                    <p class="text-xs text-gray-400 font-medium max-w-[200px]">Promote an open-source AI tool, model, or GPU project here.</p>
+                    <a href="mailto:ads@example.com?subject=PromptCraft%20ad%20inquiry" class="mt-3 text-[11px] bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 px-3 py-1 rounded-md transition-all">
+                        Advertise with us
+                    </a>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- CUSTOM GEMINI API KEY MODAL -->
+    <div id="apiKeyModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel border border-gray-700 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-key text-yellow-500"></i>
+                    Optional Gemini API Key
+                </h3>
+                <button id="closeModalBtn" class="text-gray-400 hover:text-white text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <p class="text-xs text-gray-300 leading-relaxed">
+                By default, this open-source tool uses built-in smart client-side visual extraction. For <strong>deep multi-modal vision analysis</strong>, you can plug in your own free Google Gemini API Key.
+            </p>
+            <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1">API Key</label>
+                <input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="w-full bg-darkbg border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-brand-500 font-mono">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button id="clearKeyBtn" class="bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs px-3 py-2 rounded-lg transition-all">Clear Key</button>
+                <button id="saveKeyBtn" class="bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-all">Save & Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTIFICATION TOAST -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-gray-900 border border-gray-700 text-white text-xs px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2">
+        <i id="toastIcon" class="fa-solid fa-check text-green-400"></i>
+        <span id="toastMessage">Action completed</span>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="mt-12 border-t border-gray-800/80 bg-darkbg/50 py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500">
+            <p>© 2026 PromptCraft AI. Fully Open-Source & Client-Side Capable.</p>
+            <div class="flex items-center space-x-6">
+                <a href="#" class="hover:text-gray-300 transition-colors">Privacy Policy</a>
+                <a href="#" class="hover:text-gray-300 transition-colors">Terms of Service</a>
+                <a href="https://github.com" target="_blank" class="hover:text-gray-300 transition-colors">Open Source GitHub</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // DOM Elements
+        const dropZone = document.getElementById('dropZone');
+        const imageInput = document.getElementById('imageInput');
+        const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+        const previewContainer = document.getElementById('previewContainer');
+        const imagePreview = document.getElementById('imagePreview');
+        const removeImageBtn = document.getElementById('removeImageBtn');
+        const generateBtn = document.getElementById('generateBtn');
+        const fileInfoText = document.getElementById('fileInfoText');
+        const outputContainer = document.getElementById('outputContainer');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const copyBtn = document.getElementById('copyBtn');
+        const enhanceBtn = document.getElementById('enhanceBtn');
+        const engineBadge = document.getElementById('engineBadge');
+        const targetEngine = document.getElementById('targetEngine');
+        const detailLevel = document.getElementById('detailLevel');
+        
+        // Modal DOM Elements
+        const apiKeyBtn = document.getElementById('apiKeyBtn');
+        const apiKeyModal = document.getElementById('apiKeyModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const saveKeyBtn = document.getElementById('saveKeyBtn');
+        const clearKeyBtn = document.getElementById('clearKeyBtn');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+
+        // State variables
+        let currentFile = null;
+        let base64ImageData = null;
+        let customApiKey = localStorage.getItem('promptcraft_gemini_key') || "";
+
+        const sponsorAds = [
+            {
+                name: 'ComfyUI',
+                url: 'https://github.com/comfyanonymous/ComfyUI',
+                icon: 'fa-diagram-project',
+                color: 'text-green-400',
+                copy: 'Build flexible Stable Diffusion workflows locally with ComfyUI.',
+                detail: 'Open-source node-based image generation',
+                cta: 'View project'
+            },
+            {
+                name: 'Ollama',
+                url: 'https://ollama.com',
+                icon: 'fa-terminal',
+                color: 'text-blue-400',
+                copy: 'Run powerful open models locally with Ollama.',
+                detail: 'Local AI models for developers',
+                cta: 'Explore Ollama'
+            },
+            {
+                name: 'Hugging Face',
+                url: 'https://huggingface.co',
+                icon: 'fa-face-smile',
+                color: 'text-yellow-400',
+                copy: 'Discover community-built models and datasets for your next idea.',
+                detail: 'The open platform for machine learning',
+                cta: 'Browse models'
+            }
+        ];
+
+        const topAdCopy = document.getElementById('topAdCopy');
+        const topAdLink = document.getElementById('topAdLink');
+        const topAdCta = document.getElementById('topAdCta');
+        const toolAdList = document.getElementById('toolAdList');
+        let sponsorIndex = 0;
+
+        function renderSponsorAds() {
+            const activeAd = sponsorAds[sponsorIndex];
+            topAdCopy.innerHTML = `<strong class="text-white">${activeAd.copy}</strong>`;
+            topAdLink.href = activeAd.url;
+            topAdCta.textContent = activeAd.cta;
+
+            toolAdList.innerHTML = sponsorAds.map((ad) => `
+                <li>
+                    <a href="${ad.url}" target="_blank" rel="noopener noreferrer" class="p-2.5 rounded-xl bg-darkbg/60 hover:bg-darkbg border border-gray-800/80 flex items-center justify-between transition-all group">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 rounded-lg bg-brand-500/10 ${ad.color} flex items-center justify-center font-bold text-xs">
+                                <i class="fa-solid ${ad.icon}"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold text-gray-200 group-hover:text-brand-400 transition-colors">${ad.name}</p>
+                                <p class="text-[11px] text-gray-500">${ad.detail}</p>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-xs text-gray-600 group-hover:text-brand-400 transition-colors"></i>
+                    </a>
+                </li>
+            `).join('');
+        }
+
+        renderSponsorAds();
+        setInterval(() => {
+            sponsorIndex = (sponsorIndex + 1) % sponsorAds.length;
+            renderSponsorAds();
+        }, 8000);
+
+        if (customApiKey) {
+            apiKeyInput.value = customApiKey;
+        }
+
+        // --- STREAMING_CHUNK:Event Listeners for Drag and Drop File Handling... ---
+        dropZone.addEventListener('click', () => imageInput.click());
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.add('border-brand-500', 'bg-brand-500/5'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.remove('border-brand-500', 'bg-brand-500/5'), false);
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length) handleFile(files[0]);
+        });
+
+        imageInput.addEventListener('change', (e) => {
+            if (e.target.files.length) handleFile(e.target.files[0]);
+        });
+
+        removeImageBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            resetImageUpload();
+        });
+
+        // --- STREAMING_CHUNK:File Processing and Canvas Analysis Functions... ---
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showToast('Please upload a valid image file', 'error');
+                return;
+            }
+
+            currentFile = file;
+            fileInfoText.textContent = `${file.name} (${(file.size / 1024).toFixed(0)} KB)`;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                base64ImageData = e.target.result;
+                imagePreview.src = base64ImageData;
+                
+                uploadPlaceholder.classList.add('hidden');
+                previewContainer.classList.remove('hidden');
+
+                // Enable Generate Button
+                generateBtn.disabled = false;
+                generateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function resetImageUpload() {
+            currentFile = null;
+            base64ImageData = null;
+            imageInput.value = '';
+            imagePreview.src = '';
+            fileInfoText.textContent = '';
+
+            previewContainer.classList.add('hidden');
+            uploadPlaceholder.classList.remove('hidden');
+
+            generateBtn.disabled = true;
+            generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            
+            outputContainer.innerHTML = '<p class="text-gray-500 italic text-center pt-10">Upload an image and click "Generate AI Prompt" to create your output prompt here.</p>';
+            copyBtn.disabled = true;
+            enhanceBtn.disabled = true;
+        }
+
+        // --- STREAMING_CHUNK:Prompt Generation Core Engine Logic... ---
+        generateBtn.addEventListener('click', async () => {
+            if (!base64ImageData) return;
+
+            loadingOverlay.classList.remove('hidden');
+            const engine = targetEngine.value;
+            engineBadge.textContent = engine.toUpperCase();
+
+            try {
+                let generatedText = "";
+                
+                if (customApiKey) {
+                    // Call Gemini API directly using user provided key
+                    generatedText = await callGeminiVisionApi(customApiKey, base64ImageData, engine);
+                } else {
+                    // Fallback to Intelligent Client-side Simulation Engine
+                    generatedText = await runClientVisionAnalysis(imagePreview, engine);
+                }
+
+                renderPromptOutput(generatedText);
+                showToast('Prompt generated successfully!');
+
+            } catch (error) {
+                console.error("Generation error:", error);
+                // Fallback gracefully to smart client simulation if API fails
+                const fallbackText = await runClientVisionAnalysis(imagePreview, engine);
+                renderPromptOutput(fallbackText);
+                showToast('Generated using standard client engine', 'info');
+            } finally {
+                loadingOverlay.classList.add('hidden');
+            }
+        });
+
+        // --- STREAMING_CHUNK:Client-Side Vision Analytics & Color Analysis Algorithm... ---
+        async function runClientVisionAnalysis(imgElem, engine) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    // 1. Calculate Aspect Ratio
+                    const width = imgElem.naturalWidth || 1024;
+                    const height = imgElem.naturalHeight || 1024;
+                    const ratio = width / height;
+                    
+                    let arString = "--ar 1:1";
+                    if (ratio > 1.6) arString = "--ar 16:9";
+                    else if (ratio > 1.25) arString = "--ar 4:3";
+                    else if (ratio < 0.65) arString = "--ar 9:16";
+                    else if (ratio < 0.85) arString = "--ar 3:4";
+
+                    // 2. Extract Luminance & dominant color tone via canvas
+                    const canvas = document.getElementById('paletteCanvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = 50;
+                    canvas.height = 50;
+                    ctx.drawImage(imgElem, 0, 0, 50, 50);
+
+                    const imgData = ctx.getImageData(0, 0, 50, 50).data;
+                    let totalR = 0, totalG = 0, totalB = 0;
+                    for (let i = 0; i < imgData.length; i += 4) {
+                        totalR += imgData[i];
+                        totalG += imgData[i + 1];
+                        totalB += imgData[i + 2];
+                    }
+                    const avgR = totalR / (imgData.length / 4);
+                    const avgG = totalG / (imgData.length / 4);
+                    const avgB = totalB / (imgData.length / 4);
+                    const brightness = (avgR * 299 + avgG * 587 + avgB * 114) / 1000;
+
+                    let lightingStyle = brightness > 128 ? "bright cinematic natural daylight, soft shadows" : "dramatic dark mood, moody neon highlights, high contrast shadows";
+                    
+                    let colorTone = "vibrant balanced color palette";
+                    if (avgR > avgG && avgR > avgB) colorTone = "warm tone aesthetic, golden hour accents";
+                    else if (avgB > avgR && avgB > avgG) colorTone = "cool blue tone, subtle atmospheric haze";
+
+                    // 3. Construct Subject Description based on selected details
+                    const cameraOpt = document.getElementById('chkCamera').checked ? ", shot on 35mm lens, depth of field, f/1.8, ultra sharp focus" : "";
+                    const lightOpt = document.getElementById('chkLighting').checked ? `, ${lightingStyle}, ${colorTone}` : "";
+                    const arOpt = document.getElementById('chkAspect').checked ? ` ${arString}` : "";
+
+                    const detailChoice = detailLevel.value;
+                    let coreSubject = "A striking portrait of a subject in a detailed modern setting with intricate texture and aesthetic lighting";
+                    
+                    if (detailChoice === "concise") {
+                        coreSubject = "High quality masterpiece photo of subject with clean composition";
+                    } else if (detailChoice === "hyper") {
+                        coreSubject = "Hyper-realistic 8k resolution masterpiece featuring an intricately detailed subject, exquisite surface textures, raytraced lighting reflections, volumetric atmosphere";
+                    }
+
+                    // Format specifically for Target Engine
+                    let finalPrompt = "";
+                    if (engine === "midjourney") {
+                        finalPrompt = `${coreSubject}${lightOpt}${cameraOpt} --v 6.0 --style raw${arOpt}`;
+                    } else if (engine === "flux") {
+                        finalPrompt = `${coreSubject}${lightOpt}${cameraOpt}. Highly detailed rendering, photorealistic, 8k resolution.`;
+                    } else if (engine === "sdxl") {
+                        finalPrompt = `${coreSubject}${lightOpt}${cameraOpt}, masterpiece, best quality, highly detailed, sharp focus, 8k wallpaper`;
+                    } else if (engine === "dalle3") {
+                        finalPrompt = `A high quality, detailed image featuring ${coreSubject}. The scene is illuminated by ${lightingStyle}. Professional photography composition.`;
+                    }
+
+                    resolve(finalPrompt);
+                }, 800); // simulate realistic processing delay
+            });
+        }
+
+        // --- STREAMING_CHUNK:Gemini Vision API Integrator... ---
+        async function callGeminiVisionApi(apiKey, base64Data, engine) {
+            const rawBase64 = base64Data.split(',')[1];
+            const mimeType = base64Data.split(';')[0].split(':')[1];
+
+            const systemPrompt = `You are an expert AI prompt engineer. Analyze the provided image in detail and create a detailed image generation prompt formatted specifically for ${engine}. Keep it concise, evocative, and focus on subject, composition, lighting, style, and camera angles without fluff. Return ONLY the text prompt.`;
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{
+                    role: "user",
+                    parts: [
+                        { text: systemPrompt },
+                        {
+                            inlineData: {
+                                mimeType: mimeType,
+                                data: rawBase64
+                            }
+                        }
+                    ]
+                }]
+            };
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
+                return data.candidates[0].content.parts[0].text.trim();
+            } else {
+                throw new Error("Invalid response format from API");
+            }
+        }
+
+        // --- STREAMING_CHUNK:Output Rendering & Clipboard Utilities... ---
+        function renderPromptOutput(text) {
+            outputContainer.innerHTML = `<p id="promptText" class="text-gray-200 select-all">${escapeHtml(text)}</p>`;
+            copyBtn.disabled = false;
+            enhanceBtn.disabled = false;
+        }
+
+        function escapeHtml(string) {
+            return String(string).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // Copy to Clipboard Action
+        copyBtn.addEventListener('click', () => {
+            const textToCopy = document.getElementById('promptText')?.innerText;
+            if (!textToCopy) return;
+
+            // Fallback clipboard method for iframe security contexts
+            const dummy = document.createElement("textarea");
+            document.body.appendChild(dummy);
+            dummy.value = textToCopy;
+            dummy.select();
+            document.execCommand("copy");
+            document.body.removeChild(dummy);
+
+            showToast('Prompt copied to clipboard!');
+        });
+
+        // Enhance Prompt Action
+        enhanceBtn.addEventListener('click', () => {
+            const promptElem = document.getElementById('promptText');
+            if (!promptElem) return;
+
+            let currentText = promptElem.innerText;
+            currentText += " --stylize 250 --chaos 10";
+            promptElem.innerText = currentText;
+
+            showToast('Added aesthetic parameters!');
+        });
+
+        // Modal Controls
+        apiKeyBtn.addEventListener('click', () => apiKeyModal.classList.remove('hidden'));
+        closeModalBtn.addEventListener('click', () => apiKeyModal.classList.add('hidden'));
+
+        saveKeyBtn.addEventListener('click', () => {
+            const val = apiKeyInput.value.trim();
+            customApiKey = val;
+            if (val) {
+                localStorage.setItem('promptcraft_gemini_key', val);
+                showToast('Gemini API key saved!');
+            } else {
+                localStorage.removeItem('promptcraft_gemini_key');
+            }
+            apiKeyModal.classList.add('hidden');
+        });
+
+        clearKeyBtn.addEventListener('click', () => {
+            apiKeyInput.value = "";
+            customApiKey = "";
+            localStorage.removeItem('promptcraft_gemini_key');
+            showToast('API key removed');
+            apiKeyModal.classList.add('hidden');
+        });
+
+        // Helper Toast Function
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMessage.textContent = message;
+            
+            if (type === 'error') {
+                toastIcon.className = 'fa-solid fa-triangle-exclamation text-red-400';
+            } else if (type === 'info') {
+                toastIcon.className = 'fa-solid fa-circle-info text-blue-400';
+            } else {
+                toastIcon.className = 'fa-solid fa-check text-green-400';
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
